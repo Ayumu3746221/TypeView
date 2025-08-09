@@ -1,26 +1,91 @@
-// The module 'vscode' contains the VS Code extensibility API
-// Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
+import { IRouteResolver, ResolverConfig } from './resokvers/IRouteResolver';
+import { NextjsAppRouterResolver } from "./resokvers/NextjsAppRouterResolver";
 
-// This method is called when your extension is activated
-// Your extension is activated the very first time the command is executed
-export function activate(context: vscode.ExtensionContext) {
+const resolverMap : Map<string, IRouteResolver> = new Map([
+	['nextjs-app-router', new NextjsAppRouterResolver()]
+]);
 
-	// Use the console to output diagnostic information (console.log) and errors (console.error)
-	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "typeview" is now active!');
+/**
+ * Function to find the corresponding backend file from the URI
+ * @param uri URI of the API used in the front end
+ */
+async function findRouteFileForUri(uri: string): Promise<vscode.Uri | undefined> {
+	const config = vscode.workspace.getConfiguration('typeview');
 
-	// The command has been defined in the package.json file
-	// Now provide the implementation of the command with registerCommand
-	// The commandId parameter must match the command field in package.json
-	const disposable = vscode.commands.registerCommand('typeview.helloWorld', () => {
-		// The code you place here will be executed every time your command is executed
-		// Display a message box to the user
-		vscode.window.showInformationMessage('Hello World from TypeView!');
-	});
+	const allConfig = config.inspect('routeDirectories');
+    console.log('=== Full Configuration Inspect ===');
+    console.log('All config:', allConfig);
+    console.log('Global value:', allConfig?.globalValue);
+    console.log('Workspace value:', allConfig?.workspaceValue);
+    console.log('Workspace folder value:', allConfig?.workspaceFolderValue);
+    console.log('Default value:', allConfig?.defaultValue);
+    console.log('=====================================');
 
-	context.subscriptions.push(disposable);
+	const framework = config.get<string>('framework');
+	const routeDirs = config.get<string[]>('routeDirectories', []);
+
+	console.log('=== Configuration Debug ===');
+    console.log('Workspace folders:', vscode.workspace.workspaceFolders?.map(f => f.uri.fsPath));
+    console.log('Framework:', framework);
+    console.log('Route directories:', routeDirs);
+    console.log('========================');
+
+	if (!framework || !routeDirs || routeDirs.length === 0) {
+		vscode.window.showInformationMessage('Please configure "typeview.framework" and "typeview.routeDirectories" in your settings.');
+		return undefined;
+	}
+
+	const resolver = resolverMap.get(framework);
+	if (!resolver) {
+		vscode.window.showErrorMessage(`Framework "${framework}" is not supported.`);
+		return undefined;
+	}
+
+	const workspaceFolders = vscode.workspace.workspaceFolders;
+	if (!workspaceFolders) return undefined;
+	const rootUri = workspaceFolders[0].uri;
+
+	const resolverConfig: ResolverConfig = {
+		routeDirectoryUris: routeDirs.map(dir => vscode.Uri.joinPath(rootUri, dir))
+	};
+
+	return resolver.resolve(uri, resolverConfig);
 }
 
-// This method is called when your extension is deactivated
+export function activate(context: vscode.ExtensionContext) {
+
+	console.log('Congratulations, your extension "typeview" is now active!');
+
+	const hoverProvider = vscode.languages.registerHoverProvider(
+		['typescript', 'typescriptreact'],
+		{
+			async provideHover(document, position) {
+				const line = document.lineAt(position.line).text;
+
+				const match = line.match(/fetch\s*\(\s*['"](\/api[^'"]*)['"]/);
+				if (!match || !match[1]) return null;
+
+				const uri = match[1];
+
+				const filePath = await findRouteFileForUri(uri);
+
+				if (filePath) {
+					// debug
+					console.log(`[SUCCESS] Found file for ${uri}: ${filePath.fsPath}`);
+
+					// TODO: Implement hover information
+					return new vscode.Hover(`Found: ${filePath.fsPath}`);
+				} else {
+					console.log(`[INFO] Could not find file for ${uri}`);
+				}
+
+				return null;
+			}
+		}
+	)
+
+	context.subscriptions.push(hoverProvider);
+}
+
 export function deactivate() {}
