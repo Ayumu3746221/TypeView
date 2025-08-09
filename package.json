@@ -9,9 +9,30 @@
   "categories": [
     "Other"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
+    "configuration": {
+      "title": "TypeView",
+      "properties": {
+        "typeview.framework": {
+          "type": "string",
+          "enum": [
+            "nextjs-app-router"
+          ],
+          "default": "nextjs-app-router",
+          "description": "Specifies the backend framework used in your project."
+        },
+        "typeview.routeDirectories": {
+          "type": "array",
+          "default": [],
+          "description": "A list of routeDirectories containing API route definitions, relative to the workspace root."
+        }
+      }
+    },
     "commands": [
       {
         "command": "typeview.helloWorld",
