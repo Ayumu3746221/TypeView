@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
-import { IRouteResolver, ResolverConfig } from './resokvers/IRouteResolver';
-import { NextjsAppRouterResolver } from "./resokvers/NextjsAppRouterResolver";
+import { IRouteResolver, ResolverConfig } from './resolvers/IRouteResolver';
+import { NextjsAppRouterResolver } from "./resolvers/NextjsAppRouterResolver";
+import { extractTypeDefinition, findBodyType } from './parser/ts-parser';
+import { resolveModulePath } from './utils/path-resolver';
 
 const resolverMap : Map<string, IRouteResolver> = new Map([
 	['nextjs-app-router', new NextjsAppRouterResolver()]
@@ -12,24 +14,8 @@ const resolverMap : Map<string, IRouteResolver> = new Map([
  */
 async function findRouteFileForUri(uri: string): Promise<vscode.Uri | undefined> {
 	const config = vscode.workspace.getConfiguration('typeview');
-
-	const allConfig = config.inspect('routeDirectories');
-    console.log('=== Full Configuration Inspect ===');
-    console.log('All config:', allConfig);
-    console.log('Global value:', allConfig?.globalValue);
-    console.log('Workspace value:', allConfig?.workspaceValue);
-    console.log('Workspace folder value:', allConfig?.workspaceFolderValue);
-    console.log('Default value:', allConfig?.defaultValue);
-    console.log('=====================================');
-
 	const framework = config.get<string>('framework');
 	const routeDirs = config.get<string[]>('routeDirectories', []);
-
-	console.log('=== Configuration Debug ===');
-    console.log('Workspace folders:', vscode.workspace.workspaceFolders?.map(f => f.uri.fsPath));
-    console.log('Framework:', framework);
-    console.log('Route directories:', routeDirs);
-    console.log('========================');
 
 	if (!framework || !routeDirs || routeDirs.length === 0) {
 		vscode.window.showInformationMessage('Please configure "typeview.framework" and "typeview.routeDirectories" in your settings.');
@@ -54,33 +40,53 @@ async function findRouteFileForUri(uri: string): Promise<vscode.Uri | undefined>
 }
 
 export function activate(context: vscode.ExtensionContext) {
-
-	console.log('Congratulations, your extension "typeview" is now active!');
-
 	const hoverProvider = vscode.languages.registerHoverProvider(
 		['typescript', 'typescriptreact'],
 		{
 			async provideHover(document, position) {
 				const line = document.lineAt(position.line).text;
-
 				const match = line.match(/fetch\s*\(\s*['"](\/api[^'"]*)['"]/);
-				if (!match || !match[1]) return null;
 
-				const uri = match[1];
-
-				const filePath = await findRouteFileForUri(uri);
-
-				if (filePath) {
-					// debug
-					console.log(`[SUCCESS] Found file for ${uri}: ${filePath.fsPath}`);
-
-					// TODO: Implement hover information
-					return new vscode.Hover(`Found: ${filePath.fsPath}`);
-				} else {
-					console.log(`[INFO] Could not find file for ${uri}`);
+				if (!match || !match[1]) {
+                	return null;
 				}
 
-				return null;
+				const uri = match[1];
+				const routeFilePath = await findRouteFileForUri(uri);
+
+				if (!routeFilePath) {
+                	return null;
+				}
+
+				const typeInfo = await findBodyType(routeFilePath);
+
+				if (!typeInfo) {
+                	return null;
+				}
+
+				const workspaceFolders = vscode.workspace.workspaceFolders;
+				if (!workspaceFolders) {
+                	return null;
+				}
+
+				const typeFileUri = await resolveModulePath(typeInfo.importPath, workspaceFolders[0].uri);
+				
+				if (!typeFileUri) {
+                	return null;
+				}
+
+				const typeDefinitionText = await extractTypeDefinition(typeFileUri, typeInfo.typeName);
+
+				if (!typeDefinitionText) {
+					return null;
+				}
+
+				const markdownString = new vscode.MarkdownString();
+				markdownString.appendMarkdown(`**Request Body Type** for \`${uri}\`\n`);
+				markdownString.appendCodeblock(typeDefinitionText, 'typescript');
+				markdownString.appendMarkdown(`\n*From: \`${typeInfo.importPath}\`*`);
+
+				return new vscode.Hover(markdownString);
 			}
 		}
 	)
