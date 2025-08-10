@@ -1,71 +1,149 @@
-# typeview README
+# TypeView
 
-This is the README for your extension "typeview". After writing up a brief description, we recommend including the following sections.
+**Show TypeScript API request body types on hover for TypeScript + Monorepo projects**
 
-## Features
+![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/Ayumu3746221.typeview?style=flat-square)
+![Visual Studio Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/Ayumu3746221.typeview?style=flat-square)
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+[日本語版README](./README_ja.md) | [English README](./README.md)
 
-For example if there is an image subfolder under your extension project workspace:
+## 🚀 Features
 
-\!\[feature X\]\(images/feature-x.png\)
+- **Hover Type Display**: Hover over `fetch("/api/...")` calls to see TypeScript request body types
+- **Next.js App Router Support**: Works seamlessly with Next.js App Router API routes
+- **TypeScript Path Alias Resolution**: Supports `@/` and other path aliases defined in tsconfig.json
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+![Demo](./demo.gif)
 
-## Requirements
+## 📦 Installation
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+1. Open VS Code
+2. Go to Extensions (Ctrl+Shift+X / Cmd+Shift+X)
+3. Search for "TypeView"
+4. Click Install
 
-## Extension Settings
+Or install directly from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=Ayumu3746221.typeview).
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+## ⚙️ Configuration
 
-For example:
+Add these settings to your workspace `.vscode/settings.json`:
 
-This extension contributes the following settings:
+```json
+{
+  "typeview.framework": "nextjs-app-router",
+  "typeview.routeDirectories": ["app/api"]
+}
+```
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+### Settings
 
-## Known Issues
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `typeview.framework` | Backend framework type | `"nextjs-app-router"` |
+| `typeview.routeDirectories` | API route directories (relative to workspace root) | `[]` |
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+## 🎯 Usage
 
-## Release Notes
+1. Configure your workspace settings (see above)
+2. Open a TypeScript/TSX file
+3. Write code like: `fetch("/api/users")`
+4. Hover over the API path to see the request body type definition
 
-Users appreciate release notes as you update your extension.
+### Example
 
-### 1.0.0
+```typescript
+// In your component
+const handleSubmit = async (userData: UserCreateInput) => {
+  const response = await fetch("/api/users", {  // <- Hover here!
+    method: "POST",
+    body: JSON.stringify(userData)
+  });
+};
+```
 
-Initial release of ...
+When you hover over `"/api/users"`, you'll see:
 
-### 1.0.1
+```typescript
+interface UserCreateInput {
+  name: string;
+  email: string;
+  age?: number;
+}
+```
 
-Fixed issue #.
+## 📁 Project Structure
 
-### 1.1.0
+Your project should follow this structure:
 
-Added features X, Y, and Z.
+```
+your-project/
+├── app/
+│   └── api/
+│       └── users/
+│           └── route.ts        # API route file
+├── lib/
+│   └── types/
+│       └── UserCreateInput.ts  # Type definitions
+└── .vscode/
+    └── settings.json           # TypeView configuration
+```
+
+### API Route Example (`app/api/users/route.ts`)
+
+```typescript
+import { UserCreateInput } from '@/lib/types/UserCreateInput';
+
+export async function POST(req: Request) {
+  const body: UserCreateInput = await req.json();  // <- TypeView detects this pattern
+  
+  // Your API logic here
+  return Response.json({ success: true });
+}
+```
+
+## 🚧 Preview Version Notice
+
+This is a **preview version** of TypeView. We're actively seeking feedback to improve the extension.
+
+### Known Limitations
+
+- Currently supports only `const body: Type = await req.json()` pattern
+- Only Next.js App Router is supported
+- Limited to `.ts` and `.tsx` file extensions
+
+### Planned Features
+
+- Zero Configuration support
+- Support for type assertions (`as Type`)
+- Support for server-side type transformation libraries like Zod
+- Support for HTTP request libraries other than fetch (e.g., Axios)
+- Support for other frameworks like Hono
+- More flexible code pattern recognition
+- Better error handling and diagnostics
+
+## 🤝 Contributing
+
+We welcome contributions! Please check out our [GitHub repository](https://github.com/Ayumu3746221/TypeView) for:
+
+- 🐛 Bug reports
+- 💡 Feature requests  
+- 🔧 Pull requests
+- 📖 Documentation improvements
+
+### 🌍 English Documentation Help Needed
+
+**Note**: The primary author is a Japanese developer. We are actively seeking contributors to help improve the English documentation, fix grammatical errors, and make the content more accessible to international users. If you're a native English speaker or have strong English skills, your help would be greatly appreciated!
+
+## 📝 License
+
+MIT License - see [LICENSE](./LICENSE) for details.
+
+## 🙋‍♂️ Support
+
+- 🐛 [Report Issues](https://github.com/Ayumu3746221/TypeView/issues)
+- 💬 [Discussions](https://github.com/Ayumu3746221/TypeView/discussions)
+- ⭐ Star the project if you find it useful!
 
 ---
 
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+**Enjoy coding with better type visibility! 🎉**

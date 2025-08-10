@@ -2,7 +2,29 @@
   "name": "typeview",
   "displayName": "TypeView",
   "description": "Visualize TypeScript request body types in VSCode",
-  "version": "0.0.1",
+  "version": "0.1.0-pre",
+  "publisher": "Ayumu3746221",
+  "author": {
+    "name": "ayumu"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ayumu3746221/typeview.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Ayumu3746221/typeview/issues"
+  },
+  "homepage": "https://github.com/Ayumu3746221/typeview#readme",
+   "keywords": [
+    "typescript",
+    "nextjs",
+    "api",
+    "hover",
+    "type-definitions",
+    "developer-tools",
+    "app-router"
+   ],
   "engines": {
     "vscode": "^1.103.0"
   },
@@ -32,13 +54,7 @@
           "description": "A list of routeDirectories containing API route definitions, relative to the workspace root."
         }
       }
-    },
-    "commands": [
-      {
-        "command": "typeview.helloWorld",
-        "title": "Hello World"
-      }
-    ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",
