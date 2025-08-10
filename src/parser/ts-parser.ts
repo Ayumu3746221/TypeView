@@ -55,8 +55,6 @@ export async function findBodyType(routeFileUri: vscode.Uri): Promise<ParsedType
                                 // 型注釈 (`: Type`) があるかチェック
                                 if (declaration.type && ts.isTypeReferenceNode(declaration.type)) {
                                     bodyTypeName = declaration.type.typeName.getText(sourceFile);
-                                } else {
-                                    console.log(`[TS-PARSER] No type annotation found or not a type reference`);
                                 }
                             }
                         }
@@ -77,4 +75,28 @@ export async function findBodyType(routeFileUri: vscode.Uri): Promise<ParsedType
     } catch (error) {
         return undefined;
     }
+}
+
+/**
+ * Extract the definition of a specific interface or type name as a string from the specified file.
+ * @param typeFileUri The URI of the file where the type is defined
+ * @param typeName The name of the type to extract
+ */
+export async function extractTypeDefinition(typeFileUri: vscode.Uri, typeName: string): Promise<string | undefined> {
+    const fileContent = Buffer.from(await vscode.workspace.fs.readFile(typeFileUri)).toString('utf8');
+    const sourceFile = ts.createSourceFile(typeFileUri.fsPath, fileContent, ts.ScriptTarget.Latest, true);
+
+    let definition: string | undefined;
+
+    function visit(node: ts.Node) {
+        if ((ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node)) && node.name.text === typeName) {
+            definition = node.getText(sourceFile);
+        }
+        if (!definition) {
+            ts.forEachChild(node, visit);
+        }
+    }
+
+    visit(sourceFile);
+    return definition;
 }

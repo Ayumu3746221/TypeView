@@ -21,8 +21,6 @@ export class NextjsAppRouterResolver implements IRouteResolver {
 
             try {
                 await vscode.workspace.fs.stat(fileUri);
-
-                console.log(`[${this.name}] Found route file: ${fileUri.fsPath}`);
                 return fileUri;
             } catch (error) {
                 continue;
