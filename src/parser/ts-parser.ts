@@ -12,23 +12,69 @@ export interface ParsedTypeInfo {
  * @returns The parsed type information, or undefined if not found
  */
 export async function findBodyType(routeFileUri: vscode.Uri): Promise<ParsedTypeInfo | undefined> {
-    const fileContent = Buffer.from(await vscode.workspace.fs.readFile(routeFileUri)).toString('utf8');
+    try { 
+        const fileContent = Buffer.from(await vscode.workspace.fs.readFile(routeFileUri)).toString('utf8');
 
-    // Generate AST (abstract syntax tree)
-    const sourceFile = ts.createSourceFile(
-        routeFileUri.fsPath,
-        fileContent,
-        ts.ScriptTarget.Latest,
-        true
-    );
+        // Generate AST (abstract syntax tree)
+        const sourceFile = ts.createSourceFile(
+            routeFileUri.fsPath,
+            fileContent,
+            ts.ScriptTarget.Latest,
+            true
+        );
 
-    let bodyTypeName: string | undefined;
+        let bodyTypeName: string | undefined;
+        const importMap = new Map<string, string>(); // typeName -> importPath
 
-    // 3. ASTを巡回して、`const body: Type = ...` の `Type` を見つける
-    // TODO: ここにASTを解析するロジックを実装する
+        function visit(node: ts.Node) {
+            // --- 先に全てのインポート文を収集 ---
+            if(ts.isImportDeclaration(node)) {
+                if (node.importClause?.namedBindings && ts.isNamedImports(node.importClause.namedBindings)) {
+                    const importPath = node.moduleSpecifier.getText(sourceFile).replace(/['"]/g, '');
 
-    // 4. 型名が見つかったら、その型がどこからインポートされているかを探す
-    // TODO: ここにimport文を解析するロジックを実装する
+                    for (const element of node.importClause.namedBindings.elements) {
+                        const importName = element.name.text;
+                        importMap.set(importName, importPath);
+                    }
+                }
+            }
 
-    return undefined;
+            // --- bodyの型名を探す ---
+            // `export function POST(...)` を探す
+            if (ts.isFunctionDeclaration(node) && node.name?.text === 'POST') {
+                
+                // POST関数の内部だけを探索
+                ts.forEachChild(node.body!, (childNode) => {
+                    // `const body: Type = await req.json()` のパターンを探す
+                    if (ts.isVariableStatement(childNode)) {
+                        const declaration = childNode.declarationList.declarations[0];
+                        // `req.json()` を呼び出しているかチェック
+                        if (declaration.initializer && ts.isAwaitExpression(declaration.initializer)) {
+                            if (declaration.initializer.expression.getText(sourceFile).endsWith(".json()")) {
+                                
+                                // 型注釈 (`: Type`) があるかチェック
+                                if (declaration.type && ts.isTypeReferenceNode(declaration.type)) {
+                                    bodyTypeName = declaration.type.typeName.getText(sourceFile);
+                                } else {
+                                    console.log(`[TS-PARSER] No type annotation found or not a type reference`);
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+
+            ts.forEachChild(node, visit);
+        }
+
+        visit(sourceFile);
+
+        if (bodyTypeName && importMap.has(bodyTypeName)) {
+            const importPath = importMap.get(bodyTypeName)!;
+            return { typeName: bodyTypeName, importPath };
+        }
+        return undefined;
+    } catch (error) {
+        return undefined;
+    }
 }

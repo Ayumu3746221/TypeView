@@ -13,24 +13,8 @@ const resolverMap : Map<string, IRouteResolver> = new Map([
  */
 async function findRouteFileForUri(uri: string): Promise<vscode.Uri | undefined> {
 	const config = vscode.workspace.getConfiguration('typeview');
-
-	const allConfig = config.inspect('routeDirectories');
-    console.log('=== Full Configuration Inspect ===');
-    console.log('All config:', allConfig);
-    console.log('Global value:', allConfig?.globalValue);
-    console.log('Workspace value:', allConfig?.workspaceValue);
-    console.log('Workspace folder value:', allConfig?.workspaceFolderValue);
-    console.log('Default value:', allConfig?.defaultValue);
-    console.log('=====================================');
-
 	const framework = config.get<string>('framework');
 	const routeDirs = config.get<string[]>('routeDirectories', []);
-
-	console.log('=== Configuration Debug ===');
-    console.log('Workspace folders:', vscode.workspace.workspaceFolders?.map(f => f.uri.fsPath));
-    console.log('Framework:', framework);
-    console.log('Route directories:', routeDirs);
-    console.log('========================');
 
 	if (!framework || !routeDirs || routeDirs.length === 0) {
 		vscode.window.showInformationMessage('Please configure "typeview.framework" and "typeview.routeDirectories" in your settings.');
