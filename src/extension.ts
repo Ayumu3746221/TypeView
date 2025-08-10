@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
-import { IRouteResolver, ResolverConfig } from './resokvers/IRouteResolver';
-import { NextjsAppRouterResolver } from "./resokvers/NextjsAppRouterResolver";
+import { IRouteResolver, ResolverConfig } from './resolvers/IRouteResolver';
+import { NextjsAppRouterResolver } from "./resolvers/NextjsAppRouterResolver";
+import { findBodyType } from './parser/ts-parser';
 
 const resolverMap : Map<string, IRouteResolver> = new Map([
 	['nextjs-app-router', new NextjsAppRouterResolver()]
@@ -68,16 +69,20 @@ export function activate(context: vscode.ExtensionContext) {
 
 				const uri = match[1];
 
-				const filePath = await findRouteFileForUri(uri);
+				const routeFilePath = await findRouteFileForUri(uri);
 
-				if (filePath) {
-					// debug
-					console.log(`[SUCCESS] Found file for ${uri}: ${filePath.fsPath}`);
+				if (routeFilePath) {
 
-					// TODO: Implement hover information
-					return new vscode.Hover(`Found: ${filePath.fsPath}`);
-				} else {
-					console.log(`[INFO] Could not find file for ${uri}`);
+					const typeInfo = await findBodyType(routeFilePath);
+
+					if (typeInfo) {
+						console.log(`[SUCCESS] Found type ${typeInfo.typeName} from ${typeInfo.importPath}`);
+
+						// TODO: Implement hover information
+						return new vscode.Hover(`Type: ${typeInfo.typeName}\nFrom: ${typeInfo.importPath}`);
+					} else {
+						console.log(`[INFO] Could not parse type information for ${routeFilePath.fsPath}`);
+					}
 				}
 
 				return null;
