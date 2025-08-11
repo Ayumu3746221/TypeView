@@ -50,6 +50,17 @@ function collectImportStatements(
         'Please use named imports (import { Type } from "...") or default imports (import Type from "...").'
     );
   }
+
+  // Check for namespace imports (import * as Name)
+  if (
+    node.importClause.namedBindings &&
+    ts.isNamespaceImport(node.importClause.namedBindings)
+  ) {
+    throw new Error(
+      `Import statement with unsupported import clause found: "${importPath}". ` +
+        'Please use named imports (import { Type } from "...") or default imports (import Type from "...").'
+    );
+  }
 }
 
 export { collectImportStatements };
