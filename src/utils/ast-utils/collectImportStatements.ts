@@ -26,6 +26,11 @@ function collectImportStatements(
         "Please separate types into dedicated files with proper named imports."
     );
   }
+  // Handle default imports (e.g., import UserType from "@/lib/types")
+  if (node.importClause.name) {
+    const defaultImportName = node.importClause.name.text;
+    importMap.set(defaultImportName, importPath);
+  }
 
   // Handle named imports (e.g., import { UserType, PostType } from "@/lib/types")
   if (
@@ -36,21 +41,15 @@ function collectImportStatements(
       const importName = element.name.text;
       importMap.set(importName, importPath);
     }
-    return;
   }
 
-  // Handle default imports (e.g., import UserType from "@/lib/types")
-  if (node.importClause.name) {
-    const defaultImportName = node.importClause.name.text;
-    importMap.set(defaultImportName, importPath);
-    return;
+  // Check if neither default nor named imports were found
+  if (!node.importClause.name && !node.importClause.namedBindings) {
+    throw new Error(
+      `Import statement with unsupported import clause found: "${importPath}". ` +
+        'Please use named imports (import { Type } from "...") or default imports (import Type from "...").'
+    );
   }
-
-  // If we reach here, it means there's an import clause but no named or default imports
-  throw new Error(
-    `Import statement with unsupported import clause found: "${importPath}". ` +
-      'Please use named imports (import { Type } from "...") or default imports (import Type from "...").'
-  );
 }
 
 export { collectImportStatements };
