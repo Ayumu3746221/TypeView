@@ -71,10 +71,10 @@
   "devDependencies": {
     "@types/vscode": "^1.102.0",
     "@types/mocha": "^10.0.10",
-    "@types/node": "22.x",
+    "@types/node": "24.x",
     "@typescript-eslint/eslint-plugin": "^8.39.0",
     "@typescript-eslint/parser": "^8.39.0",
-    "eslint": "^9.32.0",
+    "eslint": "^9.33.0",
     "typescript": "^5.9.2",
     "ts-loader": "^9.5.2",
     "webpack": "^5.101.0",
