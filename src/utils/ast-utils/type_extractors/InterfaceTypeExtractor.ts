@@ -13,6 +13,6 @@ export class InterfaceTypeExtractor implements TypeDefinitionExtractor {
   }
 
   extract(node: ts.Node, sourceFile: ts.SourceFile): string {
-    return node.getText(sourceFile);
+    return node.getFullText(sourceFile).trim();
   }
 }

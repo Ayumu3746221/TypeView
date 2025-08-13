@@ -76,24 +76,40 @@ export function activate(context: vscode.ExtensionContext) {
           return null;
         }
 
-        const workspaceFolders = vscode.workspace.workspaceFolders;
-        if (!workspaceFolders) {
+        let typeDefinitionText: string | undefined;
+        let sourceInfo: string;
+
+        // Handle different type sources
+        if (typeInfo.localDefinition) {
+          // Type is defined in the same file
+          typeDefinitionText = typeInfo.localDefinition;
+          sourceInfo = "*(Defined in same file)*";
+        } else if (typeInfo.importPath) {
+          // Type is imported or found in workspace
+          const workspaceFolders = vscode.workspace.workspaceFolders;
+          if (!workspaceFolders) {
+            return null;
+          }
+
+          const typeFileUri = await resolveModulePath(
+            typeInfo.importPath,
+            workspaceFolders[0].uri
+          );
+
+          if (!typeFileUri) {
+            return null;
+          }
+
+          typeDefinitionText = await extractTypeDefinition(
+            typeFileUri,
+            typeInfo.typeName
+          );
+
+          sourceInfo = `*From: \`${typeInfo.importPath}\`*`;
+        } else {
+          // No type source found
           return null;
         }
-
-        const typeFileUri = await resolveModulePath(
-          typeInfo.importPath,
-          workspaceFolders[0].uri
-        );
-
-        if (!typeFileUri) {
-          return null;
-        }
-
-        const typeDefinitionText = await extractTypeDefinition(
-          typeFileUri,
-          typeInfo.typeName
-        );
 
         if (!typeDefinitionText) {
           return null;
@@ -102,7 +118,7 @@ export function activate(context: vscode.ExtensionContext) {
         const markdownString = new vscode.MarkdownString();
         markdownString.appendMarkdown(`**Request Body Type** for \`${uri}\`\n`);
         markdownString.appendCodeblock(typeDefinitionText, "typescript");
-        markdownString.appendMarkdown(`\n*From: \`${typeInfo.importPath}\`*`);
+        markdownString.appendMarkdown(`\n${sourceInfo}`);
 
         return new vscode.Hover(markdownString);
       },

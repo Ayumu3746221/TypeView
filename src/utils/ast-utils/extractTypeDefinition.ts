@@ -33,7 +33,9 @@ export async function extractTypeDefinition(
   let definition: string | undefined;
 
   function visit(node: ts.Node) {
-    if (definition) return; // Already found
+    if (definition) {
+      return; // Already found
+    }
 
     // Try each extractor
     for (const extractor of extractors) {

@@ -2,13 +2,15 @@ import * as vscode from "vscode";
 import * as ts from "typescript";
 import { collectImportStatements } from "../utils/ast-utils/collectImportStatements";
 import { findFunctionBodyType } from "./function-searcher";
+import { findAnyLocalTypeDefinition } from "./local-type-searcher";
 import { AwaitReqJsonMatcher } from "../utils/ast-utils/pattern_matchers/AwaitReqJsonMatcher";
 import { TypeAssertionMatcher } from "../utils/ast-utils/pattern_matchers/TypeAssertionMatcher";
 import { ZodParseMatcher } from "../utils/ast-utils/pattern_matchers/ZodParseMatcher";
 
 export interface ParsedTypeInfo {
   typeName: string;
-  importPath: string;
+  importPath?: string; // Optional for local types
+  localDefinition?: string; // For same-file definitions
 }
 
 /**
@@ -62,11 +64,32 @@ export async function findBodyType(
       patternMatchers
     );
 
-    if (bodyTypeName && importMap.has(bodyTypeName)) {
+    if (!bodyTypeName) {
+      return undefined;
+    }
+
+    // First, check if type is imported
+    if (importMap.has(bodyTypeName)) {
       const importPath = importMap.get(bodyTypeName)!;
       return { typeName: bodyTypeName, importPath };
     }
 
+    // Second, check if type is defined locally in the same file
+    const localDefinition = findAnyLocalTypeDefinition(
+      sourceFile,
+      bodyTypeName
+    );
+    if (localDefinition) {
+      return {
+        typeName: bodyTypeName,
+        localDefinition,
+      };
+    }
+
+    // Type not found in imports or local definitions
+    console.log(
+      `Type "${bodyTypeName}" not found in imports or local definitions`
+    );
     return undefined;
   } catch (error) {
     return undefined;

@@ -6,7 +6,9 @@ import { TypeDefinitionExtractor } from "./TypeDefinitionExtractor";
  */
 export class VariableDeclarationExtractor implements TypeDefinitionExtractor {
   canHandle(node: ts.Node, typeName: string): boolean {
-    if (!ts.isVariableStatement(node)) return false;
+    if (!ts.isVariableStatement(node)) {
+      return false;
+    }
 
     const declaration = node.declarationList.declarations[0];
     return (
