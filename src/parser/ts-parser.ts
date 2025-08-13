@@ -2,9 +2,9 @@ import * as vscode from "vscode";
 import * as ts from "typescript";
 import { collectImportStatements } from "../utils/ast-utils/collectImportStatements";
 import { findFunctionBodyType } from "./function-searcher";
-import { AwaitReqJsonMatcher } from "../pattern_matcher/AwaitReqJsonMatcher";
-import { TypeAssertionMatcher } from "../pattern_matcher/TypeAssertionMatcher";
-import { ZodParseMatcher } from "../pattern_matcher/ZodParseMatcher";
+import { AwaitReqJsonMatcher } from "../utils/ast-utils/pattern_matchers/AwaitReqJsonMatcher";
+import { TypeAssertionMatcher } from "../utils/ast-utils/pattern_matchers/TypeAssertionMatcher";
+import { ZodParseMatcher } from "../utils/ast-utils/pattern_matchers/ZodParseMatcher";
 
 export interface ParsedTypeInfo {
   typeName: string;
@@ -71,53 +71,4 @@ export async function findBodyType(
   } catch (error) {
     return undefined;
   }
-}
-
-export async function extractTypeDefinition(
-  typeFileUri: vscode.Uri,
-  typeName: string
-): Promise<string | undefined> {
-  const fileContent = Buffer.from(
-    await vscode.workspace.fs.readFile(typeFileUri)
-  ).toString("utf8");
-  const sourceFile = ts.createSourceFile(
-    typeFileUri.fsPath,
-    fileContent,
-    ts.ScriptTarget.Latest,
-    true
-  );
-
-  let definition: string | undefined;
-
-  function visit(node: ts.Node) {
-    // 1. 従来のinterface/type宣言
-    if (
-      (ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node)) &&
-      node.name.text === typeName
-    ) {
-      definition = node.getText(sourceFile);
-      return;
-    }
-
-    // 2. 変数宣言（Zodスキーマ用）
-    if (ts.isVariableStatement(node)) {
-      const declaration = node.declarationList.declarations[0];
-
-      if (
-        declaration.name &&
-        ts.isIdentifier(declaration.name) &&
-        declaration.name.text === typeName
-      ) {
-        definition = node.getText(sourceFile);
-        return;
-      }
-    }
-
-    if (!definition) {
-      ts.forEachChild(node, visit);
-    }
-  }
-
-  visit(sourceFile);
-  return definition;
 }

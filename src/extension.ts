@@ -1,7 +1,8 @@
 import * as vscode from "vscode";
 import { IRouteResolver, ResolverConfig } from "./resolvers/IRouteResolver";
 import { NextjsAppRouterResolver } from "./resolvers/NextjsAppRouterResolver";
-import { extractTypeDefinition, findBodyType } from "./parser/ts-parser";
+import { findBodyType } from "./parser/ts-parser";
+import { extractTypeDefinition } from "./utils/ast-utils/extractTypeDefinition";
 import { resolveModulePath } from "./utils/path-resolver";
 
 const resolverMap: Map<string, IRouteResolver> = new Map([

@@ -1,6 +1,6 @@
 // src/parser/function-searcher.ts
 import * as ts from "typescript";
-import { BodyPatternMatcher } from "../pattern_matcher/BodyPatternMatcher";
+import { BodyPatternMatcher } from "../utils/ast-utils/pattern_matchers/BodyPatternMatcher";
 
 /**
  * Search for a specific function in the source file
