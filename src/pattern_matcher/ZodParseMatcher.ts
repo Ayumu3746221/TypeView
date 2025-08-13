@@ -1,10 +1,5 @@
-// src/pattern_matcher/ZodParseMatcher.ts (将来の拡張)
 import * as ts from "typescript";
 import { BodyPatternMatcher } from "./BodyPatternMatcher";
-
-/**
- * Matcher for `const body = Schema.parse(await req.json())` pattern
- */
 
 export class ZodParseMatcher implements BodyPatternMatcher {
   readonly name = "zod-parse";
@@ -21,18 +16,38 @@ export class ZodParseMatcher implements BodyPatternMatcher {
     }
 
     const callExpression = declaration.initializer;
-    const expressionText = callExpression.expression.getText(sourceFile);
 
-    // Look for .parse( pattern
-    return expressionText.endsWith(".parse");
+    // Check for .parse() method call
+    if (ts.isPropertyAccessExpression(callExpression.expression)) {
+      const methodName = callExpression.expression.name.text;
+      return methodName === "parse";
+    }
+
+    return false;
   }
 
   extractTypeName(
     declaration: ts.VariableDeclaration,
     sourceFile: ts.SourceFile
   ): string | undefined {
-    // Zodの場合は型推論されるため、スキーマ名から型を推測する必要がある
-    // より複雑な実装が必要（将来の課題）
+    if (
+      !declaration.initializer ||
+      !ts.isCallExpression(declaration.initializer)
+    ) {
+      return undefined;
+    }
+
+    const callExpression = declaration.initializer;
+
+    // Extract schema name (UserSchema.parse → UserSchema)
+    if (ts.isPropertyAccessExpression(callExpression.expression)) {
+      const schemaName =
+        callExpression.expression.expression.getText(sourceFile);
+
+      // Return schema name as-is, no transformation needed!
+      return schemaName;
+    }
+
     return undefined;
   }
 }

@@ -4,6 +4,7 @@ import { collectImportStatements } from "../utils/ast-utils/collectImportStateme
 import { findFunctionBodyType } from "./function-searcher";
 import { AwaitReqJsonMatcher } from "../pattern_matcher/AwaitReqJsonMatcher";
 import { TypeAssertionMatcher } from "../pattern_matcher/TypeAssertionMatcher";
+import { ZodParseMatcher } from "../pattern_matcher/ZodParseMatcher";
 
 export interface ParsedTypeInfo {
   typeName: string;
@@ -52,6 +53,7 @@ export async function findBodyType(
     const patternMatchers = [
       new AwaitReqJsonMatcher(), // const body: Type = await req.json()
       new TypeAssertionMatcher(), // const body = await req.json() as Type
+      new ZodParseMatcher(), // const body = Schema.parse(await req.json())
     ];
 
     const bodyTypeName = findFunctionBodyType(
@@ -64,9 +66,9 @@ export async function findBodyType(
       const importPath = importMap.get(bodyTypeName)!;
       return { typeName: bodyTypeName, importPath };
     }
+
     return undefined;
   } catch (error) {
-    console.error("Error in findBodyType:", error);
     return undefined;
   }
 }
@@ -88,12 +90,29 @@ export async function extractTypeDefinition(
   let definition: string | undefined;
 
   function visit(node: ts.Node) {
+    // 1. 従来のinterface/type宣言
     if (
       (ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node)) &&
       node.name.text === typeName
     ) {
       definition = node.getText(sourceFile);
+      return;
     }
+
+    // 2. 変数宣言（Zodスキーマ用）
+    if (ts.isVariableStatement(node)) {
+      const declaration = node.declarationList.declarations[0];
+
+      if (
+        declaration.name &&
+        ts.isIdentifier(declaration.name) &&
+        declaration.name.text === typeName
+      ) {
+        definition = node.getText(sourceFile);
+        return;
+      }
+    }
+
     if (!definition) {
       ts.forEachChild(node, visit);
     }
