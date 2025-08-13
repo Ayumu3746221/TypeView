@@ -5,13 +5,15 @@
 ![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/Ayumu3746221.typeview?style=flat-square)
 ![Visual Studio Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/Ayumu3746221.typeview?style=flat-square)
 
-[日本語版README](./README_ja.md) | [English README](./README.md)
+[日本語版 README](./README_ja.md) | [English README](./README.md)
 
 ## 🚀 Features
 
 - **Hover Type Display**: Hover over `fetch("/api/...")` calls to see TypeScript request body types
 - **Next.js App Router Support**: Works seamlessly with Next.js App Router API routes
 - **TypeScript Path Alias Resolution**: Supports `@/` and other path aliases defined in tsconfig.json
+- **Multiple Type Definition Patterns**: Automatically detects imported types, local type definitions, and Zod schemas
+- **Flexible Type Extraction**: Advanced AST analysis supporting various code patterns
 
 ![Demo](./demo.gif)
 
@@ -37,10 +39,10 @@ Add these settings to your workspace `.vscode/settings.json`:
 
 ### Settings
 
-| Setting | Description | Default |
-|---------|-------------|---------|
-| `typeview.framework` | Backend framework type | `"nextjs-app-router"` |
-| `typeview.routeDirectories` | API route directories (relative to workspace root) | `[]` |
+| Setting                     | Description                                        | Default               |
+| --------------------------- | -------------------------------------------------- | --------------------- |
+| `typeview.framework`        | Backend framework type                             | `"nextjs-app-router"` |
+| `typeview.routeDirectories` | API route directories (relative to workspace root) | `[]`                  |
 
 ## 🎯 Usage
 
@@ -49,31 +51,111 @@ Add these settings to your workspace `.vscode/settings.json`:
 3. Write code like: `fetch("/api/users")`
 4. Hover over the API path to see the request body type definition
 
-### Example
+## 💡 Supported Patterns
+
+TypeView automatically detects various code patterns:
+
+### 1. Type Annotation Pattern
+
+```typescript
+import { UserCreateInput } from "@/types/user";
+
+export async function POST(req: Request) {
+  const body: UserCreateInput = await req.json(); // Detects imported types
+  return Response.json({ success: true });
+}
+```
+
+### 2. Type Assertion Pattern
+
+```typescript
+export async function POST(req: Request) {
+  const body = (await req.json()) as UserCreateInput; // Detects type assertions
+  return Response.json({ success: true });
+}
+```
+
+### 3. Local Type Definition Pattern
+
+```typescript
+// Type defined in the same file
+interface CreatePostRequest {
+  title: string;
+  content: string;
+  tags?: string[];
+}
+
+export async function POST(req: Request) {
+  const body: CreatePostRequest = await req.json(); // Detects local types
+  return Response.json({ success: true });
+}
+```
+
+### 4. Zod Schema Pattern
+
+```typescript
+import { z } from "zod";
+
+const UserSchema = z.object({
+  name: z.string(),
+  email: z.string().email(),
+  age: z.number().optional(),
+});
+
+export async function POST(req: Request) {
+  const body = UserSchema.parse(await req.json()); // Detects Zod schemas
+  return Response.json({ success: true });
+}
+```
+
+### Hover Display Examples
+
+When calling APIs in your components:
 
 ```typescript
 // In your component
-const handleSubmit = async (userData: UserCreateInput) => {
-  const response = await fetch("/api/users", {  // <- Hover here!
+const handleSubmit = async (userData: any) => {
+  const response = await fetch("/api/users", {
+    // <- Hover here!
     method: "POST",
-    body: JSON.stringify(userData)
+    body: JSON.stringify(userData),
   });
 };
 ```
 
-When you hover over `"/api/users"`, you'll see:
+When you hover over `"/api/users"`, you'll see the corresponding API route's type information:
 
 ```typescript
+// For imported types
 interface UserCreateInput {
   name: string;
   email: string;
   age?: number;
 }
+*From: `@/types/user`*
+
+// For local definitions
+interface CreatePostRequest {
+  title: string;
+  content: string;
+  tags?: string[];
+}
+*(Defined in same file)*
+
+// For Zod schemas
+const UserSchema = z.object({
+  name: z.string(),
+  email: z.string().email(),
+  age: z.number().optional()
+});
+*From: `zod`*
 ```
 
 ## 📁 Project Structure
 
-Your project should follow this structure:
+TypeView supports various project structures:
+
+### Pattern 1: Using Imported Types
 
 ```
 your-project/
@@ -83,50 +165,66 @@ your-project/
 │           └── route.ts        # API route file
 ├── lib/
 │   └── types/
-│       └── UserCreateInput.ts  # Type definitions
+│       └── user.ts             # Type definitions
 └── .vscode/
     └── settings.json           # TypeView configuration
 ```
 
-### API Route Example (`app/api/users/route.ts`)
+### Pattern 2: Using Local Type Definitions
 
-```typescript
-import { UserCreateInput } from '@/lib/types/UserCreateInput';
-
-export async function POST(req: Request) {
-  const body: UserCreateInput = await req.json();  // <- TypeView detects this pattern
-  
-  // Your API logic here
-  return Response.json({ success: true });
-}
+```
+your-project/
+├── app/
+│   └── api/
+│       └── posts/
+│           └── route.ts        # API route + type definitions
+└── .vscode/
+    └── settings.json           # TypeView configuration
 ```
 
-## 🚧 Preview Version Notice
+### Pattern 3: Using Zod Schemas
 
-This is a **preview version** of TypeView. We're actively seeking feedback to improve the extension.
+```
+your-project/
+├── app/
+│   └── api/
+│       └── validate/
+│           └── route.ts        # API route + Zod schemas
+└── .vscode/
+    └── settings.json           # TypeView configuration
+```
 
-### Known Limitations
+## ✨ v0.2.0 New Features
 
-- Currently supports only `const body: Type = await req.json()` pattern
+- **🔍 Advanced Pattern Matching**: Automatically detects multiple code patterns
+- **📍 Local Type Definition Support**: Detects and displays types defined in the same file
+- **⚡ Zod Schema Support**: Supports modern type validation libraries
+- **🏗️ Architecture Improvements**: Extensible design using Strategy pattern
+- **🧪 Comprehensive Testing**: Quality assurance with 34 automated tests
+
+## 🚧 Limitations
+
+### Current Limitations
+
 - Only Next.js App Router is supported
 - Limited to `.ts` and `.tsx` file extensions
+- Only POST functions are supported (GET, PUT, DELETE support coming soon)
 
 ### Planned Features
 
 - Zero Configuration support
-- Support for type assertions (`as Type`)
-- Support for server-side type transformation libraries like Zod
+- Support for all HTTP methods (GET, PUT, DELETE, etc.)
 - Support for HTTP request libraries other than fetch (e.g., Axios)
 - Support for other frameworks like Hono
-- More flexible code pattern recognition
 - Better error handling and diagnostics
+- Performance optimizations
 
 ## 🤝 Contributing
 
 We welcome contributions! Please check out our [GitHub repository](https://github.com/Ayumu3746221/TypeView) for:
 
 - 🐛 Bug reports
-- 💡 Feature requests  
+- 💡 Feature requests
 - 🔧 Pull requests
 - 📖 Documentation improvements
 

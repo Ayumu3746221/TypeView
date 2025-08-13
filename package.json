@@ -2,7 +2,7 @@
   "name": "typeview",
   "displayName": "TypeView",
   "description": "Visualize TypeScript request body types in VSCode",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "publisher": "Ayumu3746221",
   "icon": "images/icon.png",
   "author": {
@@ -17,7 +17,7 @@
     "url": "https://github.com/Ayumu3746221/typeview/issues"
   },
   "homepage": "https://github.com/Ayumu3746221/typeview#readme",
-   "keywords": [
+  "keywords": [
     "typescript",
     "nextjs",
     "api",
@@ -25,7 +25,7 @@
     "type-definitions",
     "developer-tools",
     "app-router"
-   ],
+  ],
   "engines": {
     "vscode": "^1.103.0"
   },
