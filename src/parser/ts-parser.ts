@@ -1,10 +1,13 @@
 import * as vscode from "vscode";
 import * as ts from "typescript";
 import { collectImportStatements } from "../utils/ast-utils/collectImportStatements";
+import { findFunctionBodyType } from "./function-searcher";
+import { AwaitReqJsonMatcher } from "../pattern_matcher/AwaitReqJsonMatcher";
+import { TypeAssertionMatcher } from "../pattern_matcher/TypeAssertionMatcher";
 
 export interface ParsedTypeInfo {
-  typeName: string; // e.g., "UserCreateInput"
-  importPath: string; // e.g., "@/lib/types"
+  typeName: string;
+  importPath: string;
 }
 
 /**
@@ -20,7 +23,6 @@ export async function findBodyType(
       await vscode.workspace.fs.readFile(routeFileUri)
     ).toString("utf8");
 
-    // Generate AST (abstract syntax tree)
     const sourceFile = ts.createSourceFile(
       routeFileUri.fsPath,
       fileContent,
@@ -28,9 +30,9 @@ export async function findBodyType(
       true
     );
 
-    let bodyTypeName: string | undefined;
-    const importMap = new Map<string, string>(); // typeName -> importPath
+    const importMap = new Map<string, string>();
 
+    // Collect import statements
     function visit(node: ts.Node) {
       try {
         collectImportStatements(node, sourceFile, importMap);
@@ -41,42 +43,22 @@ export async function findBodyType(
             : String(importError);
         throw new Error(`In file ${routeFileUri.fsPath}: ${errorMessage}`);
       }
-
-      // --- bodyの型名を探す ---
-      // `export function POST(...)` を探す
-      if (ts.isFunctionDeclaration(node) && node.name?.text === "POST") {
-        // POST関数の内部だけを探索
-        ts.forEachChild(node.body!, (childNode) => {
-          // `const body: Type = await req.json()` のパターンを探す
-          if (ts.isVariableStatement(childNode)) {
-            const declaration = childNode.declarationList.declarations[0];
-            // `req.json()` を呼び出しているかチェック
-            if (
-              declaration.initializer &&
-              ts.isAwaitExpression(declaration.initializer)
-            ) {
-              if (
-                declaration.initializer.expression
-                  .getText(sourceFile)
-                  .endsWith(".json()")
-              ) {
-                // 型注釈 (`: Type`) があるかチェック
-                if (
-                  declaration.type &&
-                  ts.isTypeReferenceNode(declaration.type)
-                ) {
-                  bodyTypeName = declaration.type.typeName.getText(sourceFile);
-                }
-              }
-            }
-          }
-        });
-      }
-
       ts.forEachChild(node, visit);
     }
 
     visit(sourceFile);
+
+    // Search for body type using pattern matchers
+    const patternMatchers = [
+      new AwaitReqJsonMatcher(), // const body: Type = await req.json()
+      new TypeAssertionMatcher(), // const body = await req.json() as Type
+    ];
+
+    const bodyTypeName = findFunctionBodyType(
+      sourceFile,
+      "POST",
+      patternMatchers
+    );
 
     if (bodyTypeName && importMap.has(bodyTypeName)) {
       const importPath = importMap.get(bodyTypeName)!;
@@ -84,15 +66,11 @@ export async function findBodyType(
     }
     return undefined;
   } catch (error) {
+    console.error("Error in findBodyType:", error);
     return undefined;
   }
 }
 
-/**
- * Extract the definition of a specific interface or type name as a string from the specified file.
- * @param typeFileUri The URI of the file where the type is defined
- * @param typeName The name of the type to extract
- */
 export async function extractTypeDefinition(
   typeFileUri: vscode.Uri,
   typeName: string
