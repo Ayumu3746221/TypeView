@@ -3,7 +3,32 @@
 **Show TypeScript API request body types on hover for TypeScript + Monorepo projects**
 
 ![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/Ayumu3746221.typeview?style=flat-square)
-![Visual Studio Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/Ayumu3746221.typeview?style=flat-square)
+![Visual Stud## 🤝 Contributing
+
+We welcome contributions! Please check out our [GitHub repository](https://github.com/Ayumu3746221/TypeView) for:
+
+- 🐛 Bug reports
+- 💡 Feature requests
+- 🔧 Pull requests
+- 📖 Documentation improvements
+
+### 🏗️ Development Architecture
+
+TypeView features an **extensible architecture** built with:
+
+- **Strategy Pattern**: Easy addition of new HTTP libraries and frameworks
+- **Dependency Injection**: Testable and maintainable component design
+- **Priority System**: Configurable execution order for pattern matching
+- **Professional Logging**: VS Code OutputChannel integration for debugging
+
+See our [Developer Guide](./docs/DEVELOPER_GUIDE.md) for detailed architecture documentation and contribution guidelines.
+
+### ✅ Quality Assurance
+
+- **100 Automated Tests**: Comprehensive test coverage ensuring reliability
+- **VS Code Integration**: Full compatibility with VS Code extension constraints
+- **TypeScript Safety**: Strict typing throughout the codebase
+- **Error Handling**: Robust error handling with graceful degradationtplace Downloads](https://img.shields.io/visual-studio-marketplace/d/Ayumu3746221.typeview?style=flat-square)
 
 [日本語版 README](./README_ja.md) | [English README](./README.md)
 
@@ -53,7 +78,7 @@ Add these settings to your workspace `.vscode/settings.json`:
 
 ## 💡 Supported Patterns
 
-TypeView automatically detects various code patterns:
+TypeView now features an **extensible pattern matching system** that automatically detects various code patterns:
 
 ### 1. Type Annotation Pattern
 
@@ -108,22 +133,40 @@ export async function POST(req: Request) {
 }
 ```
 
-### Hover Display Examples
+### 5. HTTP Library Support
 
-When calling APIs in your components:
+TypeView supports multiple HTTP request libraries through **extensible pattern matchers**:
 
 ```typescript
-// In your component
+// Fetch API (Priority: 10)
+fetch("/api/users", { method: "POST" });
+
+// Axios (Priority: 8)
+axios.post("/api/users", data);
+client.get("/api/posts");
+
+// Custom libraries can be easily added through the extensible architecture
+```
+
+### Hover Display Examples
+
+When calling APIs in your components, **TypeView provides rich contextual information**:
+
+```typescript
+// In your React component
 const handleSubmit = async (userData: any) => {
   const response = await fetch("/api/users", {
     // <- Hover here!
     method: "POST",
     body: JSON.stringify(userData),
   });
+
+  // Also works with axios
+  await axios.post("/api/posts", postData); // <- Hover here too!
 };
 ```
 
-When you hover over `"/api/users"`, you'll see the corresponding API route's type information:
+**TypeView will display** comprehensive type information with source context:
 
 ```typescript
 // For imported types
@@ -142,7 +185,7 @@ interface CreatePostRequest {
 }
 *(Defined in same file)*
 
-// For Zod schemas
+// For Zod schemas with validation rules
 const UserSchema = z.object({
   name: z.string(),
   email: z.string().email(),
@@ -196,11 +239,14 @@ your-project/
 
 ## ✨ v0.2.0 New Features
 
-- **🔍 Advanced Pattern Matching**: Automatically detects multiple code patterns
+- **🏗️ Extensible Architecture**: Complete rewrite using Strategy pattern with dependency injection
+- **🔧 Multiple HTTP Libraries**: Support for fetch, axios, and extensible pattern matching system
+- **🎯 Advanced Pattern Detection**: Intelligent detection of type annotations, type assertions, and Zod schemas
 - **📍 Local Type Definition Support**: Detects and displays types defined in the same file
-- **⚡ Zod Schema Support**: Supports modern type validation libraries
-- **🏗️ Architecture Improvements**: Extensible design using Strategy pattern
-- **🧪 Comprehensive Testing**: Quality assurance with 34 automated tests
+- **⚡ Professional Logging**: VS Code OutputChannel integration for debugging and monitoring
+- **🧪 Comprehensive Testing**: Quality assurance with **100 automated tests** passing
+- **🛡️ Error Handling**: Robust error handling with graceful degradation
+- **⚙️ Priority System**: Configurable execution order for pattern matchers
 
 ## 🚧 Limitations
 
@@ -214,10 +260,11 @@ your-project/
 
 - Zero Configuration support
 - Support for all HTTP methods (GET, PUT, DELETE, etc.)
-- Support for HTTP request libraries other than fetch (e.g., Axios)
-- Support for other frameworks like Hono
-- Better error handling and diagnostics
-- Performance optimizations
+- Additional HTTP request libraries (Superagent, Got, etc.)
+- Support for other frameworks like Hono, Express, FastAPI
+- Enhanced debugging tools and diagnostics
+- Performance optimizations with caching
+- Custom pattern matcher development API
 
 ## �🤝 Contributing
 
