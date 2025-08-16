@@ -219,7 +219,7 @@ your-project/
 - Better error handling and diagnostics
 - Performance optimizations
 
-## 🤝 Contributing
+## �🤝 Contributing
 
 We welcome contributions! Please check out our [GitHub repository](https://github.com/Ayumu3746221/TypeView) for:
 
