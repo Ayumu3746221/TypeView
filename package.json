@@ -2,7 +2,7 @@
   "name": "typeview",
   "displayName": "TypeView",
   "description": "Visualize TypeScript request body types in VSCode",
-  "version": "0.2.0",
+  "version": "1.0.0",
   "publisher": "Ayumu3746221",
   "icon": "images/icon.png",
   "author": {
