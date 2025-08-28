@@ -1,21 +1,54 @@
 # TypeView
 
-**TypeScript + Monorepository プロジェクトで API のリクエストボディ型をホバー表示する VS Code 拡張機能**
+**TypeScript + Monorepo プロジェクトで API リクエストボディ型をホバー表示する VS Code 拡張機能**
 
 ![Visual Studio Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/Ayumu3746221.typeview?style=flat-square)
 ![Visual Studio Marketplace Downloads](https://img.shields.io/visual-studio-marketplace/d/Ayumu3746221.typeview?style=flat-square)
 
-[日本語版 README](./README_ja.md) | [English README](./README.md)
+**Languages:** [🇺🇸 English](./README.md) | [🇯🇵 日本語](./README_ja.md)
 
-## 🚀 機能
-
-- **ホバー型表示**: `fetch("/api/...")` の部分にマウスをホバーすると、TypeScript のリクエストボディ型が表示されます
-- **Next.js App Router サポート**: Next.js App Router の API ルートとシームレスに連携
-- **TypeScript パスエイリアス解決**: tsconfig.json で定義された `@/` などのパスエイリアスをサポート
-- **複数の型定義パターン対応**: Import 型、ローカル型定義、Zod スキーマを自動検出
-- **柔軟な型抽出**: 複数のコードパターンに対応した高度な AST 解析
+## 🎬 デモ
 
 ![デモ](./demo.gif)
+
+**動作内容:** `fetch("/api/users")` にホバーするだけで、TypeScript リクエストボディ型定義とソース情報が即座に表示されます。
+
+## 🚀 TypeView でできること
+
+TypeView は API 開発において**瞬時の型可視化**を提供し、フロントエンドコードの API 呼び出しにホバーするだけで開発を革命的に改善します：
+
+- ✨ **設定不要** - `fetch("/api/...")` や `axios.post("/api/...")` にホバーするだけ
+- 🎯 **知的検出** - 対応する API ルートファイルを自動発見
+- 📝 **豊富な型情報** - 完全な TypeScript インターフェース、型、Zod スキーマを表示
+- 🔄 **複数パターン対応** - 型注釈、アサーション、モダンなバリデーションライブラリと連携
+- 📍 **ソースコンテキスト** - 型のインポート元やローカル定義かを表示
+
+### モダンな開発に最適
+
+```typescript
+// React コンポーネント内で - API パスにホバーするだけ！
+const handleSubmit = async (userData: any) => {
+  const response = await fetch("/api/users", {
+    // 👈 ここにホバー！
+    method: "POST",
+    body: JSON.stringify(userData),
+  });
+
+  // axios でも動作
+  await axios.post("/api/posts", postData); // 👈 ここにも！
+};
+```
+
+**TypeView が即座に表示:**
+
+```typescript
+interface UserCreateInput {
+  name: string;
+  email: string;
+  age?: number;
+}
+*From: `@/types/user`*
+```
 
 ## 📦 インストール
 
@@ -26,9 +59,9 @@
 
 または[VS Code マーケットプレース](https://marketplace.visualstudio.com/items?itemName=Ayumu3746221.typeview)から直接インストールできます。
 
-## ⚙️ 設定
+## ⚙️ クイック設定
 
-ワークスペースの `.vscode/settings.json` に以下の設定を追加してください：
+ワークスペースの `.vscode/settings.json` に以下を追加：
 
 ```json
 {
@@ -37,187 +70,89 @@
 }
 ```
 
-### 設定項目
-
-| 設定名                      | 説明                                                         | デフォルト値          |
-| --------------------------- | ------------------------------------------------------------ | --------------------- |
-| `typeview.framework`        | 使用するバックエンドフレームワーク                           | `"nextjs-app-router"` |
-| `typeview.routeDirectories` | API ルートディレクトリ（ワークスペースルートからの相対パス） | `[]`                  |
-
-## 🎯 使い方
-
-1. ワークスペース設定を行う（上記参照）
-2. TypeScript/TSX ファイルを開く
-3. `fetch("/api/users")` のようなコードを書く
-4. API パスの部分にホバーすると、リクエストボディの型定義が表示されます
-
 ## 💡 対応パターン
 
-TypeView は以下の様々なコードパターンを自動検出します：
+TypeView の**拡張可能アーキテクチャ**が自動検出：
 
-### 1. 型注釈パターン
-
-```typescript
-import { UserCreateInput } from "@/types/user";
-
-export async function POST(req: Request) {
-  const body: UserCreateInput = await req.json(); // Import型を検出
-  return Response.json({ success: true });
-}
-```
-
-### 2. 型アサーションパターン
+### 📋 API ルートパターン
 
 ```typescript
-export async function POST(req: Request) {
-  const body = (await req.json()) as UserCreateInput; // 型アサーションを検出
-  return Response.json({ success: true });
-}
-```
+// ✅ 型注釈
+const body: UserType = await req.json();
 
-### 3. ローカル型定義パターン
+// ✅ 型アサーション
+const body = (await req.json()) as UserType;
 
-```typescript
-// 同じファイル内で型定義
-interface CreatePostRequest {
-  title: string;
-  content: string;
-  tags?: string[];
-}
+// ✅ Zod スキーマバリデーション
+const body = UserSchema.parse(await req.json());
 
-export async function POST(req: Request) {
-  const body: CreatePostRequest = await req.json(); // ローカル型を検出
-  return Response.json({ success: true });
-}
-```
-
-### 4. Zod スキーマパターン
-
-```typescript
-import { z } from "zod";
-
-const UserSchema = z.object({
-  name: z.string(),
-  email: z.string().email(),
-  age: z.number().optional(),
-});
-
-export async function POST(req: Request) {
-  const body = UserSchema.parse(await req.json()); // Zodスキーマを検出
-  return Response.json({ success: true });
-}
-```
-
-### ホバー表示例
-
-コンポーネントで API を呼び出すとき：
-
-```typescript
-// コンポーネント内で
-const handleSubmit = async (userData: any) => {
-  const response = await fetch("/api/users", {
-    // <- ここにホバー！
-    method: "POST",
-    body: JSON.stringify(userData),
-  });
-};
-```
-
-`"/api/users"` にホバーすると、該当する API ルートの型情報が表示されます：
-
-```typescript
-// Import型の場合
-interface UserCreateInput {
+// ✅ ローカル型定義
+interface LocalType {
   name: string;
-  email: string;
-  age?: number;
 }
-*From: `@/types/user`*
-
-// ローカル定義の場合
-interface CreatePostRequest {
-  title: string;
-  content: string;
-  tags?: string[];
-}
-*(Defined in same file)*
-
-// Zodスキーマの場合
-const UserSchema = z.object({
-  name: z.string(),
-  email: z.string().email(),
-  age: z.number().optional()
-});
-*From: `zod`*
 ```
 
-## 📁 プロジェクト構成
+### 🌐 HTTP ライブラリサポート
 
-プロジェクトは以下のような構成をサポートします：
+```typescript
+// ✅ Fetch API（優先度: 10）
+fetch("/api/users", { method: "POST" });
 
-### パターン 1: Import 型を使用する場合
+// ✅ Axios（優先度: 8）
+axios.post("/api/users", data);
+client.get("/api/posts");
 
-```
-your-project/
-├── app/
-│   └── api/
-│       └── users/
-│           └── route.ts        # APIルートファイル
-├── lib/
-│   └── types/
-│       └── user.ts             # 型定義ファイル
-└── .vscode/
-    └── settings.json           # TypeView設定
+// 🔧 カスタムライブラリも簡単に追加可能
 ```
 
-### パターン 2: ローカル型定義を使用する場合
+### 📁 プロジェクト構成サポート
 
 ```
-your-project/
-├── app/
-│   └── api/
-│       └── posts/
-│           └── route.ts        # APIルート + 型定義
-└── .vscode/
-    └── settings.json           # TypeView設定
+✅ Import型             ✅ ローカル定義            ✅ Zodスキーマ
+app/api/users/route.ts   app/api/posts/route.ts    app/api/validate/route.ts
+lib/types/user.ts        (同ファイル内の型)         (同ファイル内のスキーマ)
 ```
 
-### パターン 3: Zod スキーマを使用する場合
+## 🚧 現在の状況
 
-```
-your-project/
-├── app/
-│   └── api/
-│       └── validate/
-│           └── route.ts        # APIルート + Zodスキーマ
-└── .vscode/
-    └── settings.json           # TypeView設定
-```
+### ✅ 完全サポート
 
-## ✨ v0.2.0 の新機能
+- Next.js App Router API ルート
+- TypeScript (.ts) と React (.tsx) ファイル
+- POST 関数ボディ型検出
+- tsconfig.json エイリアスでのインポートパス解決
+- ローカル・インポート型定義
+- Zod スキーマバリデーションパターン
 
-- **🔍 高度なパターンマッチング**: 複数のコードパターンを自動検出
-- **📍 ローカル型定義サポート**: 同じファイル内の型定義を検出・表示
-- **⚡ Zod スキーマ対応**: モダンな型検証ライブラリをサポート
-- **🏗️ アーキテクチャ改善**: Strategy パターンによる拡張可能な設計
-- **🧪 包括的テスト**: 34 個の自動テストで品質保証
+### 🔄 近日実装予定
 
-## 🚧 制限事項
+- 全 HTTP メソッド（GET、PUT、DELETE）
+- 追加フレームワーク（Hono、Express、FastAPI）
+- より多くの HTTP ライブラリ（Superagent、Got）
+- ゼロ設定セットアップ
+- 強化されたデバッグツール
 
-### 現在の制限事項
+---
 
-- Next.js App Router のみ対応
-- `.ts` および `.tsx` ファイル拡張子のみ対応
-- POST 関数のみサポート（GET、PUT、DELETE は今後対応予定）
+## 🏗️ 開発・アーキテクチャ
 
-### 予定されている機能
+### 拡張可能設計
 
-- Zero Config（設定不要）でのサポート
-- 全 HTTP メソッド（GET、PUT、DELETE 等）のサポート
-- Axios 等の fetch 関数以外の Http リクエストをサポート
-- Hono など他フレームワークのサポート
-- エラーハンドリングと診断機能の向上
-- パフォーマンス最適化
+TypeView は拡張性のために構築されたモダンな **Strategy Pattern** アーキテクチャを特徴：
+
+- **🔧 パターンマッチャー**: 新しい HTTP ライブラリサポートを簡単に追加
+- **⚙️ 優先度システム**: 異なるパターンの実行順序を設定可能
+- **🧪 依存性注入**: 完全にテスト可能で保守可能なコンポーネント
+- **📊 プロフェッショナルログ**: VS Code OutputChannel 統合
+
+### 品質保証
+
+- ✅ **100 個の自動テスト** - 信頼性を保証する包括的カバレッジ
+- 🔒 **TypeScript 安全性** - コードベース全体での厳格な型付け
+- 🛡️ **堅牢なエラーハンドリング** - 障害時の優雅な劣化
+- 📋 **VS Code 準拠** - 拡張機能制約との完全な互換性
+
+詳細なアーキテクチャドキュメントと貢献ガイドラインについては、[開発者ガイド](./docs/DEVELOPER_GUIDE_ja.md)をご覧ください。
 
 ## 🤝 コントリビュート
 
@@ -240,4 +175,4 @@ MIT License - 詳細は [LICENSE](./LICENSE) をご覧ください。
 
 ---
 
-**より良い型表示でコーディングを楽しんでください！ 🎉**
+**より良い型可視化でコーディングを楽しんでください！ 🎉**

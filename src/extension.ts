@@ -1,9 +1,14 @@
 import * as vscode from "vscode";
 import { IRouteResolver, ResolverConfig } from "./resolvers/IRouteResolver";
 import { NextjsAppRouterResolver } from "./resolvers/NextjsAppRouterResolver";
-import { findBodyType } from "./parser/ts-parser";
-import { extractTypeDefinition } from "./utils/ast-utils/extractTypeDefinition";
-import { resolveModulePath } from "./utils/path-resolver";
+import { IHoverPatternMatcher } from "./matchers/IHoverPatternMatcher";
+import { FetchPatternMatcher } from "./matchers/FetchPatternMatcher";
+import { AxiosPatternMatcher } from "./matchers/AxiosPatternMatcher";
+import { ITypeInfoResolver } from "./type-resolver/ITypeInfoResolver";
+import { TypeResolverFactory } from "./type-resolver/TypeResolverFactory";
+import { IHoverContentGenerator } from "./hover/IHoverContentGenerator";
+import { TypeHoverContentGenerator } from "./hover/TypeHoverContentGenerator";
+import { ExtensibleHoverProvider } from "./hover/ExtensibleHoverProvider";
 
 const resolverMap: Map<string, IRouteResolver> = new Map([
   ["nextjs-app-router", new NextjsAppRouterResolver()],
@@ -52,80 +57,64 @@ async function findRouteFileForUri(
 }
 
 export function activate(context: vscode.ExtensionContext) {
-  const hoverProvider = vscode.languages.registerHoverProvider(
-    ["typescript", "typescriptreact"],
-    {
-      async provideHover(document, position) {
-        const line = document.lineAt(position.line).text;
-        const match = line.match(/fetch\s*\(\s*['"](\/api[^'"]*)['"]/);
+  // Get framework configuration
+  const config = vscode.workspace.getConfiguration("typeview");
+  const framework = config.get<string>("framework");
 
-        if (!match || !match[1]) {
-          return null;
-        }
+  if (!framework) {
+    vscode.window.showInformationMessage(
+      'Please configure "typeview.framework" in your settings.'
+    );
+    return;
+  }
 
-        const uri = match[1];
-        const routeFilePath = await findRouteFileForUri(uri);
+  // Register pattern matchers
+  const patternMatchers: IHoverPatternMatcher[] = [
+    new FetchPatternMatcher(),
+    new AxiosPatternMatcher(),
+    // Future extensions can be added here:
+    // new CustomPatternMatcher(),
+  ];
 
-        if (!routeFilePath) {
-          return null;
-        }
+  // Create framework-specific type resolver
+  const typeResolver: ITypeInfoResolver | undefined =
+    TypeResolverFactory.createResolver(framework, findRouteFileForUri);
 
-        const typeInfo = await findBodyType(routeFilePath);
+  if (!typeResolver) {
+    vscode.window.showErrorMessage(
+      `Framework "${framework}" is not supported. Supported frameworks: ${TypeResolverFactory.getSupportedFrameworks().join(
+        ", "
+      )}`
+    );
+    return;
+  }
 
-        if (!typeInfo) {
-          return null;
-        }
+  // Create hover content generator
+  const contentGenerator: IHoverContentGenerator =
+    new TypeHoverContentGenerator();
 
-        let typeDefinitionText: string | undefined;
-        let sourceInfo: string;
-
-        // Handle different type sources
-        if (typeInfo.localDefinition) {
-          // Type is defined in the same file
-          typeDefinitionText = typeInfo.localDefinition;
-          sourceInfo = "*(Defined in same file)*";
-        } else if (typeInfo.importPath) {
-          // Type is imported or found in workspace
-          const workspaceFolders = vscode.workspace.workspaceFolders;
-          if (!workspaceFolders) {
-            return null;
-          }
-
-          const typeFileUri = await resolveModulePath(
-            typeInfo.importPath,
-            workspaceFolders[0].uri
-          );
-
-          if (!typeFileUri) {
-            return null;
-          }
-
-          typeDefinitionText = await extractTypeDefinition(
-            typeFileUri,
-            typeInfo.typeName
-          );
-
-          sourceInfo = `*From: \`${typeInfo.importPath}\`*`;
-        } else {
-          // No type source found
-          return null;
-        }
-
-        if (!typeDefinitionText) {
-          return null;
-        }
-
-        const markdownString = new vscode.MarkdownString();
-        markdownString.appendMarkdown(`**Request Body Type** for \`${uri}\`\n`);
-        markdownString.appendCodeblock(typeDefinitionText, "typescript");
-        markdownString.appendMarkdown(`\n${sourceInfo}`);
-
-        return new vscode.Hover(markdownString);
-      },
-    }
+  // Create extensible hover provider
+  const hoverProvider = new ExtensibleHoverProvider(
+    patternMatchers,
+    typeResolver,
+    contentGenerator
   );
 
-  context.subscriptions.push(hoverProvider);
+  // Get all supported languages from pattern matchers
+  const supportedLanguages = new Set<string>();
+  patternMatchers.forEach((matcher) =>
+    matcher
+      .getSupportedLanguages()
+      .forEach((lang) => supportedLanguages.add(lang))
+  );
+
+  // Register hover provider for all supported languages
+  const registration = vscode.languages.registerHoverProvider(
+    Array.from(supportedLanguages),
+    hoverProvider
+  );
+
+  context.subscriptions.push(registration);
 }
 
 export function deactivate() {}
